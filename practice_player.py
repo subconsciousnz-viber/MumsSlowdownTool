@@ -93,4 +93,7 @@ if not HAS_RUBBERBAND:
     st.markdown("""
         <div class="warning-box">
         ⚠️ <b>Running in Standard Mode (Local Testing)</b><br>
-        High-Quality audio engine not found on this
+        High-Quality audio engine not found on this PC. Audio will sound "grainy" for now.<br>
+        <b>Don't worry!</b> When deployed to the Cloud, it will automatically switch to High Quality.
+        </div>
+    """, unsafe_allow_html=True)
