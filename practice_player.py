@@ -16,58 +16,6 @@ except (ImportError, OSError):
 # --- Configuration ---
 st.set_page_config(page_title="Practice Player", page_icon="🎹", layout="centered")
 
-# --- CSS Styling (Strict Visibility Fix) ---
-st.markdown("""
-    <style>
-    /* 1. Force the main app background to white and text to black */
-    .stApp { 
-        background-color: #ffffff !important; 
-        color: #000000 !important; 
-    }
-    
-    /* 2. Force all standard text elements to black */
-    h1, h2, h3, p, div, span, label, li {
-        color: #000000 !important;
-    }
-    
-    /* 3. TARGET THE FILE UPLOADER specifically to be Light Mode */
-    [data-testid="stFileUploader"] {
-        background-color: #f0f2f6 !important; /* Light grey background */
-        border: 2px dashed #cccccc;
-        border-radius: 10px;
-        padding: 20px;
-    }
-    
-    /* Force text inside the uploader to be black */
-    [data-testid="stFileUploader"] div, 
-    [data-testid="stFileUploader"] span, 
-    [data-testid="stFileUploader"] small {
-        color: #000000 !important;
-        background-color: transparent !important;
-    }
-
-    /* 4. Green Buttons */
-    .stButton>button {
-        background-color: #4CAF50 !important; 
-        color: white !important; 
-        border-radius: 20px; 
-        border: none; 
-        padding: 10px 24px; 
-        width: 100%;
-    }
-
-    /* 5. Warning Box */
-    .warning-box {
-        background-color: #fff3cd; 
-        border: 1px solid #ffeeba; 
-        color: #856404 !important; 
-        padding: 10px; 
-        border-radius: 5px; 
-        margin-bottom: 20px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 # --- DSP Functions ---
 def design_high_shelf(cutoff, fs, gain_db, Q=0.707):
     A = 10 ** (gain_db / 40.0)
@@ -94,7 +42,6 @@ def process_audio(file_bytes, filename, speed_rate, pitch_semitones, smoothness_
         if speed_rate != 1.0:
             y = pyrb.time_stretch(y, sr, speed_rate)
     else:
-        # Fallback for local testing
         if pitch_semitones != 0:
             y = librosa.effects.pitch_shift(y, sr=sr, n_steps=pitch_semitones)
         if speed_rate != 1.0:
@@ -117,13 +64,9 @@ def process_audio(file_bytes, filename, speed_rate, pitch_semitones, smoothness_
 st.title("🎹 Musician's Slow-Down Tool")
 
 if not HAS_RUBBERBAND:
-    st.markdown("""
-        <div class="warning-box">
-        ⚠️ <b>Standard Mode Active</b><br>
-        High-Quality engine missing. If you are seeing this on the Cloud, check packages.txt.
-        </div>
-    """, unsafe_allow_html=True)
+    st.warning("⚠️ High-Quality Engine missing. Running in Standard Mode (Grainy).")
 
+# Initialize Session State
 if 'processed_audio' not in st.session_state:
     st.session_state.processed_audio = None
 if 'processed_name' not in st.session_state:
@@ -134,6 +77,7 @@ if 'last_uploaded' not in st.session_state:
 uploaded_file = st.file_uploader("Drop your MP3 or WAV here", type=["mp3", "wav"])
 
 if uploaded_file is not None:
+    # Reset if new file
     if st.session_state.last_uploaded != uploaded_file.name:
         st.session_state.processed_audio = None
         st.session_state.last_uploaded = uploaded_file.name
@@ -143,16 +87,48 @@ if uploaded_file is not None:
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.subheader("🐢 Playback Speed")
+        st.subheader("🐢 Speed")
         speed = st.slider("Playback Rate", 0.25, 1.0, 0.75, 0.05)
     with col2:
-        st.subheader("🔧 Pitch Tuning")
+        st.subheader("🔧 Pitch")
         pitch = st.slider("Semitones", -1.0, 1.0, 0.0, 0.05)
     with col3:
-        st.subheader("✨ Smoothness Filter")
+        st.subheader("✨ Smooth")
         smoothness = st.slider("De-Grain Level", 0, 10, 3, 1)
 
     if uploaded_file.name.lower().endswith('.mp3'):
         st.caption("ℹ️ MP3 detected: Auto-applying extra artifact reduction.")
 
-    st
+    st.markdown("---")
+    
+    # THE GENERATE BUTTON
+    if st.button("Generate Practice Track", type="primary"):
+        engine_name = "High Quality" if HAS_RUBBERBAND else "Standard"
+        with st.spinner(f"Processing with {engine_name} Engine..."):
+            try:
+                processed_y, sr = process_audio(
+                    uploaded_file, uploaded_file.name, speed, pitch, smoothness
+                )
+                
+                buffer = io.BytesIO()
+                sf.write(buffer, processed_y, sr, format='WAV')
+                buffer.seek(0)
+                
+                st.session_state.processed_audio = buffer
+                st.session_state.processed_name = f"slow_{uploaded_file.name.rsplit('.', 1)[0]}.wav"
+                
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+    # RESULTS AREA
+    if st.session_state.processed_audio is not None:
+        st.success("Track ready!")
+        st.markdown("### 🎧 Result")
+        st.audio(st.session_state.processed_audio, format='audio/wav')
+        
+        st.download_button(
+            label="⬇️ Download WAV",
+            data=st.session_state.processed_audio,
+            file_name=st.session_state.processed_name,
+            mime="audio/wav"
+        )
