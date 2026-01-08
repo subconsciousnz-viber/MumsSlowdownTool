@@ -1,1 +1,3 @@
 rubberband-cli
+libsndfile1
+ffmpeg
