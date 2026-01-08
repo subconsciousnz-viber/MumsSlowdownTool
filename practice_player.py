@@ -16,24 +16,21 @@ except (ImportError, OSError):
 # --- Configuration ---
 st.set_page_config(page_title="Practice Player", page_icon="🎹", layout="centered")
 
-# --- CSS Styling (Fixed for Visibility) ---
-# We force text to be BLACK (#000000) so it is visible even if your browser is in Dark Mode.
-st.markdown("""
-# --- CSS Styling (Fixed for Dropzone Visibility) ---
+# --- CSS Styling (Strict Visibility Fix) ---
 st.markdown("""
     <style>
-    /* Force the main app background to white and text to black */
+    /* 1. Force the main app background to white and text to black */
     .stApp { 
         background-color: #ffffff !important; 
         color: #000000 !important; 
     }
     
-    /* Force all headings and text to black */
+    /* 2. Force all standard text elements to black */
     h1, h2, h3, p, div, span, label, li {
         color: #000000 !important;
     }
     
-    /* TARGET THE FILE UPLOADER specifically to be Light Mode */
+    /* 3. TARGET THE FILE UPLOADER specifically to be Light Mode */
     [data-testid="stFileUploader"] {
         background-color: #f0f2f6 !important; /* Light grey background */
         border: 2px dashed #cccccc;
@@ -49,7 +46,7 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* Green Buttons */
+    /* 4. Green Buttons */
     .stButton>button {
         background-color: #4CAF50 !important; 
         color: white !important; 
@@ -59,7 +56,7 @@ st.markdown("""
         width: 100%;
     }
 
-    /* Warning Box */
+    /* 5. Warning Box */
     .warning-box {
         background-color: #fff3cd; 
         border: 1px solid #ffeeba; 
@@ -158,34 +155,4 @@ if uploaded_file is not None:
     if uploaded_file.name.lower().endswith('.mp3'):
         st.caption("ℹ️ MP3 detected: Auto-applying extra artifact reduction.")
 
-    st.markdown("---")
-    
-    if st.button("Generate Practice Track"):
-        engine_name = "High Quality Engine" if HAS_RUBBERBAND else "Standard Engine"
-        with st.spinner(f"Processing with {engine_name}..."):
-            try:
-                processed_y, sr = process_audio(
-                    uploaded_file, uploaded_file.name, speed, pitch, smoothness
-                )
-                
-                buffer = io.BytesIO()
-                sf.write(buffer, processed_y, sr, format='WAV')
-                buffer.seek(0)
-                
-                st.session_state.processed_audio = buffer
-                st.session_state.processed_name = f"slow_{uploaded_file.name.rsplit('.', 1)[0]}.wav"
-                
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-
-    if st.session_state.processed_audio is not None:
-        st.success("Track ready!")
-        st.markdown("### 🎧 Result")
-        st.audio(st.session_state.processed_audio, format='audio/wav')
-        
-        st.download_button(
-            label="⬇️ Download WAV",
-            data=st.session_state.processed_audio,
-            file_name=st.session_state.processed_name,
-            mime="audio/wav"
-        )
+    st
